@@ -14,13 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_snapshots: {
+        Row: {
+          budget_today: number | null
+          burnout_date: string | null
+          created_at: string
+          date: string
+          id: string
+          projected_balance: number | null
+          user_id: string
+        }
+        Insert: {
+          budget_today?: number | null
+          burnout_date?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          projected_balance?: number | null
+          user_id: string
+        }
+        Update: {
+          budget_today?: number | null
+          burnout_date?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          projected_balance?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          created_at: string
+          current_amount: number
+          id: string
+          monthly_contribution: number
+          name: string
+          status: string
+          target_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_amount?: number
+          id?: string
+          monthly_contribution?: number
+          name: string
+          status?: string
+          target_amount: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_amount?: number
+          id?: string
+          monthly_contribution?: number
+          name?: string
+          status?: string
+          target_amount?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          onboarding_completed: boolean
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          onboarding_completed?: boolean
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          onboarding_completed?: boolean
+        }
+        Relationships: []
+      }
+      recurring_items: {
+        Row: {
+          amount: number
+          created_at: string
+          day_of_month: number
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          day_of_month: number
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          day_of_month?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_daily_status: { Args: never; Returns: Json }
     }
     Enums: {
       [_ in never]: never
