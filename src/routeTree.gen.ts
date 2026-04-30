@@ -10,6 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as MetasRouteImport } from './routes/metas'
+import { Route as HistorialRouteImport } from './routes/historial'
+import { Route as FijosRouteImport } from './routes/fijos'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +20,21 @@ import { Route as IndexRouteImport } from './routes/index'
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetasRoute = MetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistorialRoute = HistorialRouteImport.update({
+  id: '/historial',
+  path: '/historial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FijosRoute = FijosRouteImport.update({
+  id: '/fijos',
+  path: '/fijos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -39,12 +57,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/fijos': typeof FijosRoute
+  '/historial': typeof HistorialRoute
+  '/metas': typeof MetasRoute
   '/onboarding': typeof OnboardingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/fijos': typeof FijosRoute
+  '/historial': typeof HistorialRoute
+  '/metas': typeof MetasRoute
   '/onboarding': typeof OnboardingRoute
 }
 export interface FileRoutesById {
@@ -52,20 +76,48 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/fijos': typeof FijosRoute
+  '/historial': typeof HistorialRoute
+  '/metas': typeof MetasRoute
   '/onboarding': typeof OnboardingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/onboarding'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/fijos'
+    | '/historial'
+    | '/metas'
+    | '/onboarding'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/onboarding'
-  id: '__root__' | '/' | '/auth' | '/dashboard' | '/onboarding'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/fijos'
+    | '/historial'
+    | '/metas'
+    | '/onboarding'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/fijos'
+    | '/historial'
+    | '/metas'
+    | '/onboarding'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  FijosRoute: typeof FijosRoute
+  HistorialRoute: typeof HistorialRoute
+  MetasRoute: typeof MetasRoute
   OnboardingRoute: typeof OnboardingRoute
 }
 
@@ -76,6 +128,27 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metas': {
+      id: '/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof MetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/historial': {
+      id: '/historial'
+      path: '/historial'
+      fullPath: '/historial'
+      preLoaderRoute: typeof HistorialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fijos': {
+      id: '/fijos'
+      path: '/fijos'
+      fullPath: '/fijos'
+      preLoaderRoute: typeof FijosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -106,6 +179,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  FijosRoute: FijosRoute,
+  HistorialRoute: HistorialRoute,
+  MetasRoute: MetasRoute,
   OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
