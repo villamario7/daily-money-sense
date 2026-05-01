@@ -196,7 +196,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      compute_daily_status: { Args: { u_id: string }; Returns: Json }
       get_daily_status: { Args: never; Returns: Json }
+      snapshot_daily_status_all: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

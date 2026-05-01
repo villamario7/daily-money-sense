@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useInvalidateFinance } from "@/hooks/use-daily-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ const empty = { id: "", name: "", target_amount: "", current_amount: "0", monthl
 
 function MetasPage() {
   const navigate = useNavigate();
+  const invalidateFinance = useInvalidateFinance();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -58,13 +60,14 @@ function MetasPage() {
       : await supabase.from("goals").insert(payload);
     if (error) { toast.error("Error"); return; }
     toast.success(form.id ? "Actualizado" : "Meta creada");
-    setOpen(false); setForm(empty); load();
+    setOpen(false); setForm(empty); load(); invalidateFinance();
   };
 
   const remove = async (id: string) => {
     if (!confirm("¿Borrar esta meta?")) return;
     await supabase.from("goals").delete().eq("id", id);
     setGoals((p) => p.filter((g) => g.id !== id));
+    invalidateFinance();
   };
 
   const addContribution = async (g: Goal, amount: number) => {
@@ -72,6 +75,7 @@ function MetasPage() {
     await supabase.from("goals").update({ current_amount: newAmount }).eq("id", g.id);
     setGoals((p) => p.map((x) => x.id === g.id ? { ...x, current_amount: newAmount } : x));
     toast.success(`+${amount}€ a ${g.name}`);
+    invalidateFinance();
   };
 
   const startEdit = (g: Goal) => {
