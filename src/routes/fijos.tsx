@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useInvalidateFinance } from "@/hooks/use-daily-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ const empty = { id: "", name: "", amount: "", day_of_month: "1", type: "expense"
 
 function FijosPage() {
   const navigate = useNavigate();
+  const invalidateFinance = useInvalidateFinance();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -62,19 +64,20 @@ function FijosPage() {
       : await supabase.from("recurring_items").insert(payload);
     if (error) { toast.error("Error al guardar"); return; }
     toast.success(form.id ? "Actualizado" : "Añadido");
-    setOpen(false); setForm(empty); load();
+    setOpen(false); setForm(empty); load(); invalidateFinance();
   };
 
   const remove = async (id: string) => {
     if (!confirm("¿Borrar este movimiento fijo?")) return;
     setItems((p) => p.filter((x) => x.id !== id));
     await supabase.from("recurring_items").delete().eq("id", id);
-    toast.success("Borrado");
+    toast.success("Borrado"); invalidateFinance();
   };
 
   const toggleActive = async (it: Item) => {
     setItems((p) => p.map((x) => x.id === it.id ? { ...x, is_active: !x.is_active } : x));
     await supabase.from("recurring_items").update({ is_active: !it.is_active }).eq("id", it.id);
+    invalidateFinance();
   };
 
   const startEdit = (it: Item) => {

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useInvalidateFinance } from "@/hooks/use-daily-status";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ type Tx = { id: string; amount: number; category: string | null; note: string | 
 
 function Historial() {
   const navigate = useNavigate();
+  const invalidateFinance = useInvalidateFinance();
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +36,7 @@ function Historial() {
   const remove = async (id: string) => {
     setTxs((p) => p.filter((t) => t.id !== id));
     const { error } = await supabase.from("transactions").delete().eq("id", id);
-    if (error) { toast.error("Error"); load(); } else toast.success("Borrado");
+    if (error) { toast.error("Error"); load(); } else { toast.success("Borrado"); invalidateFinance(); }
   };
 
   const grouped = txs.reduce<Record<string, Tx[]>>((acc, t) => {
