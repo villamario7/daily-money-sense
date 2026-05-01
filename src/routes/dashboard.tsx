@@ -21,57 +21,53 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-type Status = {
-  projected_balance: number;
-  available_today: number;
-  budget_today: number;
-  burnout_date: string;
-  score: number;
-  income_total: number;
-  spent_month: number;
-  savings_month: number;
-  fixed_paid: number;
-  fixed_pending: number;
-  days_remaining: number;
-};
-
 type Goal = { id: string; name: string; monthly_contribution: number };
 type Category = { id: string; name: string; icon: string; color: string };
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<Status | null>(null);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [cats, setCats] = useState<Category[]>([]);
+  const qc = useQueryClient();
+  const invalidateFinance = useInvalidateFinance();
+  const [authReady, setAuthReady] = useState(false);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Café");
-  const [loading, setLoading] = useState(true);
   const [pendingExpense, setPendingExpense] = useState<{ amount: number; category: string } | null>(null);
-
-  const refresh = useCallback(async () => {
-    const [{ data: s }, { data: g }, { data: c }] = await Promise.all([
-      supabase.rpc("get_daily_status"),
-      supabase.from("goals").select("id,name,monthly_contribution").eq("status", "active"),
-      supabase.from("categories").select("id,name,icon,color").order("created_at"),
-    ]);
-    if (s) setStatus(s as unknown as Status);
-    if (g) setGoals(g as Goal[]);
-    if (c) {
-      setCats(c as Category[]);
-      if (c.length && !c.find((x) => x.name === category)) setCategory(c[0].name);
-    }
-    setLoading(false);
-  }, [category]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { navigate({ to: "/auth" }); return; }
       const { data: prof } = await supabase.from("profiles").select("onboarding_completed").eq("id", session.user.id).maybeSingle();
       if (!prof?.onboarding_completed) { navigate({ to: "/onboarding" }); return; }
-      refresh();
+      setAuthReady(true);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
+
+  const { data: status, isLoading: statusLoading } = useDailyStatus(authReady);
+
+  const { data: goals = [] } = useQuery({
+    queryKey: ["goals", "active"],
+    enabled: authReady,
+    queryFn: async (): Promise<Goal[]> => {
+      const { data, error } = await supabase.from("goals").select("id,name,monthly_contribution").eq("status", "active");
+      if (error) throw error;
+      return (data ?? []) as Goal[];
+    },
+  });
+
+  const { data: cats = [] } = useQuery({
+    queryKey: ["categories"],
+    enabled: authReady,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<Category[]> => {
+      const { data, error } = await supabase.from("categories").select("id,name,icon,color").order("created_at");
+      if (error) throw error;
+      return (data ?? []) as Category[];
+    },
+  });
+
+  useEffect(() => {
+    if (cats.length && !cats.find((x) => x.name === category)) setCategory(cats[0].name);
+  }, [cats, category]);
 
   const submit = async () => {
     const num = Number(amount);
@@ -84,10 +80,13 @@ function Dashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setAmount("");
-    setStatus((prev) => prev ? { ...prev, budget_today: Math.max(0, prev.budget_today - num), spent_month: prev.spent_month + num, available_today: prev.available_today - num } : prev);
+    qc.setQueryData<DailyStatus | undefined>(dailyStatusKey, (prev) =>
+      prev ? { ...prev, budget_today: Math.max(0, prev.budget_today - num), spent_month: prev.spent_month + num, available_today: prev.available_today - num } : prev
+    );
     const { error } = await supabase.from("transactions").insert({ user_id: user.id, amount: -Math.abs(num), category: cat });
-    if (error) { toast.error("Error"); refresh(); }
-    else { toast.success(`-${num.toFixed(2)}€ · ${cat}`); refresh(); }
+    if (error) toast.error("Error");
+    else toast.success(`-${num.toFixed(2)}€ · ${cat}`);
+    invalidateFinance();
   };
 
   const confirmBig = async () => {
@@ -99,6 +98,8 @@ function Dashboard() {
   };
 
   const logout = async () => { await supabase.auth.signOut(); navigate({ to: "/" }); };
+
+  const loading = !authReady || statusLoading;
 
   const mood = useMemo(() => {
     if (!status) return null;
@@ -154,14 +155,12 @@ function Dashboard() {
         )}
       </section>
 
-      {/* Stats */}
       <section className="grid grid-cols-3 gap-2 mt-6">
         <StatCard label="Disponible" value={`${(status?.available_today ?? 0).toFixed(0)}€`} />
         <StatCard label="Gastado" value={`${(status?.spent_month ?? 0).toFixed(0)}€`} />
         <StatCard label="Reservado" value={`${(status?.fixed_pending ?? 0).toFixed(0)}€`} hint />
       </section>
 
-      {/* Reserva fijos pendientes */}
       {(status?.fixed_pending ?? 0) > 0 && (
         <section className="mt-4 p-4 rounded-2xl bg-card border flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-warning/15 grid place-items-center shrink-0">
@@ -174,7 +173,6 @@ function Dashboard() {
         </section>
       )}
 
-      {/* Goals */}
       {goals.length > 0 && (
         <section className="mt-6 space-y-2">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Metas</h2>
@@ -193,7 +191,6 @@ function Dashboard() {
         </section>
       )}
 
-      {/* Quick add bar (above bottom nav) */}
       <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-6 py-3 z-30">
         <div className="max-w-md mx-auto space-y-2">
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
