@@ -132,7 +132,7 @@ function Dashboard() {
   if (loading) return <div className="min-h-screen grid place-items-center text-muted-foreground">Cargando tu día…</div>;
 
   return (
-    <main className="min-h-screen bg-background px-6 py-6 max-w-md mx-auto w-full pb-44">
+    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md mx-auto w-full pb-56">
       <header className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-xl bg-gradient-money grid place-items-center shadow-glow">
