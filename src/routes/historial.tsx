@@ -73,16 +73,16 @@ function Historial() {
               <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-semibold">{day}</h2>
               <div className="space-y-2">
                 {items.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-card border group">
+                  <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-card border gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{t.category ?? "Sin categoría"}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}{t.note ? ` · ${t.note}` : ""}</p>
+                      <p className="text-xs text-muted-foreground truncate">{new Date(t.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}{t.note ? ` · ${t.note}` : ""}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 shrink-0">
                       <span className={`font-bold font-display tabular-nums ${Number(t.amount) < 0 ? "text-foreground" : "text-primary"}`}>
                         {Number(t.amount) > 0 ? "+" : ""}{Number(t.amount).toFixed(2)}€
                       </span>
-                      <Button variant="ghost" size="icon" onClick={() => remove(t.id)} className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8">
+                      <Button variant="ghost" size="icon" onClick={() => remove(t.id)} className="h-9 w-9 hover:bg-destructive/10" aria-label="Eliminar">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
