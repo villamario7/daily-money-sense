@@ -8,8 +8,11 @@ export type DailyStatus = {
   burnout_date: string;
   score: number;
   income_total: number;
+  income_extra: number;
   spent_month: number;
   savings_month: number;
+  saved_month: number;
+  savings_pending: number;
   fixed_paid: number;
   fixed_pending: number;
   days_remaining: number;
