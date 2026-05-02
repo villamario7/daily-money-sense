@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
 import * as Icons from "lucide-react";
-import { Plus, LogOut, Flame, AlertTriangle, Smile, TrendingUp, Lock } from "lucide-react";
+import { Plus, LogOut, Flame, AlertTriangle, Smile, TrendingUp, TrendingDown, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -31,6 +31,7 @@ function Dashboard() {
   const [authReady, setAuthReady] = useState(false);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Café");
+  const [txType, setTxType] = useState<"expense" | "income">("expense");
   const [pendingExpense, setPendingExpense] = useState<{ amount: number; category: string } | null>(null);
 
   useEffect(() => {
@@ -72,20 +73,27 @@ function Dashboard() {
   const submit = async () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
-    if (num > 50 && goals.length > 0) { setPendingExpense({ amount: num, category }); return; }
-    await registerExpense(num, category);
+    if (txType === "expense" && num > 50 && goals.length > 0) { setPendingExpense({ amount: num, category }); return; }
+    await registerTx(num, category, txType);
   };
 
-  const registerExpense = async (num: number, cat: string) => {
+  const registerTx = async (num: number, cat: string, type: "expense" | "income") => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setAmount("");
+    const signed = type === "income" ? Math.abs(num) : -Math.abs(num);
     qc.setQueryData<DailyStatus | undefined>(dailyStatusKey, (prev) =>
-      prev ? { ...prev, budget_today: Math.max(0, prev.budget_today - num), spent_month: prev.spent_month + num, available_today: prev.available_today - num } : prev
+      prev ? {
+        ...prev,
+        budget_today: type === "income" ? prev.budget_today + num : Math.max(0, prev.budget_today - num),
+        spent_month: type === "expense" ? prev.spent_month + num : prev.spent_month,
+        available_today: prev.available_today + signed,
+      } : prev
     );
-    const { error } = await supabase.from("transactions").insert({ user_id: user.id, amount: -Math.abs(num), category: cat });
+    const finalCat = type === "income" ? (cat === "Ahorro" ? "Ingreso" : cat) : cat;
+    const { error } = await supabase.from("transactions").insert({ user_id: user.id, amount: signed, category: type === "income" ? "Ingreso extra" : finalCat });
     if (error) toast.error("Error");
-    else toast.success(`-${num.toFixed(2)}€ · ${cat}`);
+    else toast.success(`${type === "income" ? "+" : "-"}${num.toFixed(2)}€ · ${type === "income" ? "Ingreso" : cat}`);
     invalidateFinance();
   };
 
@@ -93,7 +101,7 @@ function Dashboard() {
     if (pendingExpense) {
       const { amount, category } = pendingExpense;
       setPendingExpense(null);
-      await registerExpense(amount, category);
+      await registerTx(amount, category, "expense");
     }
   };
 
