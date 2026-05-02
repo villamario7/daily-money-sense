@@ -159,9 +159,9 @@ function MetasPage() {
                       <p className="text-xs text-muted-foreground">{Number(g.monthly_contribution)}€/mes · {monthsLeft > 0 ? `${monthsLeft} meses restantes` : "completado"}</p>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(g)}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(g.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" className="h-9 w-9 hover:bg-secondary" onClick={() => startEdit(g)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 hover:bg-destructive/10" onClick={() => remove(g.id)} aria-label="Eliminar"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 </div>
 

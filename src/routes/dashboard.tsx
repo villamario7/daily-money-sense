@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
 import * as Icons from "lucide-react";
-import { Plus, LogOut, Flame, AlertTriangle, Smile, TrendingUp, Lock } from "lucide-react";
+import { Plus, LogOut, Flame, AlertTriangle, Smile, TrendingUp, TrendingDown, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -31,6 +31,7 @@ function Dashboard() {
   const [authReady, setAuthReady] = useState(false);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Café");
+  const [txType, setTxType] = useState<"expense" | "income">("expense");
   const [pendingExpense, setPendingExpense] = useState<{ amount: number; category: string } | null>(null);
 
   useEffect(() => {
@@ -72,20 +73,27 @@ function Dashboard() {
   const submit = async () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
-    if (num > 50 && goals.length > 0) { setPendingExpense({ amount: num, category }); return; }
-    await registerExpense(num, category);
+    if (txType === "expense" && num > 50 && goals.length > 0) { setPendingExpense({ amount: num, category }); return; }
+    await registerTx(num, category, txType);
   };
 
-  const registerExpense = async (num: number, cat: string) => {
+  const registerTx = async (num: number, cat: string, type: "expense" | "income") => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setAmount("");
+    const signed = type === "income" ? Math.abs(num) : -Math.abs(num);
     qc.setQueryData<DailyStatus | undefined>(dailyStatusKey, (prev) =>
-      prev ? { ...prev, budget_today: Math.max(0, prev.budget_today - num), spent_month: prev.spent_month + num, available_today: prev.available_today - num } : prev
+      prev ? {
+        ...prev,
+        budget_today: type === "income" ? prev.budget_today + num : Math.max(0, prev.budget_today - num),
+        spent_month: type === "expense" ? prev.spent_month + num : prev.spent_month,
+        available_today: prev.available_today + signed,
+      } : prev
     );
-    const { error } = await supabase.from("transactions").insert({ user_id: user.id, amount: -Math.abs(num), category: cat });
+    const finalCat = type === "income" ? (cat === "Ahorro" ? "Ingreso" : cat) : cat;
+    const { error } = await supabase.from("transactions").insert({ user_id: user.id, amount: signed, category: type === "income" ? "Ingreso extra" : finalCat });
     if (error) toast.error("Error");
-    else toast.success(`-${num.toFixed(2)}€ · ${cat}`);
+    else toast.success(`${type === "income" ? "+" : "-"}${num.toFixed(2)}€ · ${type === "income" ? "Ingreso" : cat}`);
     invalidateFinance();
   };
 
@@ -93,7 +101,7 @@ function Dashboard() {
     if (pendingExpense) {
       const { amount, category } = pendingExpense;
       setPendingExpense(null);
-      await registerExpense(amount, category);
+      await registerTx(amount, category, "expense");
     }
   };
 
@@ -124,7 +132,7 @@ function Dashboard() {
   if (loading) return <div className="min-h-screen grid place-items-center text-muted-foreground">Cargando tu día…</div>;
 
   return (
-    <main className="min-h-screen bg-background px-6 py-6 max-w-md mx-auto w-full pb-44">
+    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md mx-auto w-full pb-56">
       <header className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-xl bg-gradient-money grid place-items-center shadow-glow">
@@ -135,17 +143,17 @@ function Dashboard() {
         <Button variant="ghost" size="icon" onClick={logout}><LogOut className="h-4 w-4" /></Button>
       </header>
 
-      <section className="text-center space-y-4 py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <p className="text-sm text-muted-foreground">Puedes gastar hoy</p>
-        <div className="relative inline-block">
+      <section className="text-center py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <p className="text-sm text-muted-foreground mb-3">Puedes gastar hoy</p>
+        <div className="relative inline-block mb-6">
           <div className="absolute inset-0 -z-10 bg-primary blur-3xl opacity-20 rounded-full" />
-          <h1 className="text-7xl font-bold font-display tracking-tight tabular-nums">
+          <h1 className="text-6xl sm:text-7xl font-bold font-display tracking-tight tabular-nums leading-none">
             {(status?.budget_today ?? 0).toFixed(2).replace(".", ",")}
-            <span className="text-3xl text-muted-foreground ml-1">€</span>
+            <span className="text-2xl sm:text-3xl text-muted-foreground ml-1">€</span>
           </h1>
         </div>
         {mood && (
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${mood.bg}`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${mood.bg} mb-3`}>
             <mood.Icon className={`h-4 w-4 ${mood.color}`} />
             <span className={`text-sm font-medium ${mood.color}`}>{mood.label}</span>
           </div>
@@ -191,26 +199,38 @@ function Dashboard() {
         </section>
       )}
 
-      <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-6 py-3 z-30">
+      <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 sm:px-6 py-3 z-30">
         <div className="max-w-md mx-auto space-y-2">
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-            {cats.map((c) => {
-              const Icon = (Icons[c.icon as keyof typeof Icons] as typeof Icons.Tag) ?? Icons.Tag;
-              const active = category === c.name;
-              return (
-                <button key={c.id} onClick={() => setCategory(c.name)}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
-                  <Icon className="h-3.5 w-3.5" /> {c.name}
-                </button>
-              );
-            })}
+          <div className="flex gap-1 p-1 rounded-full bg-secondary">
+            <button onClick={() => setTxType("expense")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txType === "expense" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+              <TrendingDown className="h-3.5 w-3.5" /> Gasto
+            </button>
+            <button onClick={() => setTxType("income")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txType === "income" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}>
+              <TrendingUp className="h-3.5 w-3.5" /> Ingreso
+            </button>
           </div>
+          {txType === "expense" && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+              {cats.map((c) => {
+                const Icon = (Icons[c.icon as keyof typeof Icons] as typeof Icons.Tag) ?? Icons.Tag;
+                const active = category === c.name;
+                return (
+                  <button key={c.id} onClick={() => setCategory(c.name)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                    <Icon className="h-3.5 w-3.5" /> {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="flex gap-2">
-            <Input type="number" inputMode="decimal" placeholder="0,00 €" value={amount}
+            <Input type="number" inputMode="decimal" placeholder={txType === "income" ? "Ingreso (€)" : "0,00 €"} value={amount}
               onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()}
               className="h-12 text-xl font-bold font-display text-center" />
-            <Button onClick={submit} className="h-12 w-12 bg-gradient-money text-primary-foreground hover:opacity-90 shadow-glow">
-              <Plus className="h-5 w-5" />
+            <Button onClick={submit} className={`h-12 w-12 shadow-glow ${txType === "income" ? "bg-primary text-primary-foreground" : "bg-gradient-money text-primary-foreground"} hover:opacity-90`} aria-label={txType === "income" ? "Añadir ingreso" : "Añadir gasto"}>
+              {txType === "income" ? <TrendingUp className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
             </Button>
           </div>
         </div>

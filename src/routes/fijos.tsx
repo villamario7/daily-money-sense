@@ -228,9 +228,9 @@ function Row({ it, onEdit, onDelete, onToggle }: {
           {it.type === "income" ? "+" : "-"}{Math.abs(Number(it.amount)).toFixed(0)}€
         </p>
       </div>
-      <div className="flex flex-col gap-1">
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(it)}><Pencil className="h-3.5 w-3.5" /></Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onDelete(it.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button size="icon" variant="ghost" className="h-9 w-9 hover:bg-secondary" onClick={() => onEdit(it)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-9 w-9 hover:bg-destructive/10" onClick={() => onDelete(it.id)} aria-label="Eliminar"><Trash2 className="h-4 w-4 text-destructive" /></Button>
       </div>
     </div>
   );
