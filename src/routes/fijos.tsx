@@ -198,7 +198,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-semibold">{title}</h2>
-      <div className="space-y-2">{children}</div>
+      <div className="grid sm:grid-cols-2 gap-2">{children}</div>
     </section>
   );
 }
