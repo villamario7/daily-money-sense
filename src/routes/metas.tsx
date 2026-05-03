@@ -141,7 +141,7 @@ function MetasPage() {
           <Button onClick={() => setOpen(true)}>Crear mi primera meta</Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid sm:grid-cols-2 gap-4">
           {goals.map((g) => {
             const target = Number(g.target_amount) || 1;
             const current = Number(g.current_amount);
