@@ -13,8 +13,11 @@ export type DailyStatus = {
   savings_month: number;
   saved_month: number;
   savings_pending: number;
+  fixed_total: number;
   fixed_paid: number;
   fixed_pending: number;
+  patrimony: number;
+  patrimony_goals: number;
   days_remaining: number;
 };
 
