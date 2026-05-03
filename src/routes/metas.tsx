@@ -87,7 +87,7 @@ function MetasPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background px-6 py-6 max-w-md mx-auto w-full pb-24">
+    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-24">
       <header className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold font-display">Metas</h1>
