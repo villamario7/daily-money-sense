@@ -269,6 +269,10 @@ function Dashboard() {
           </div>
           {txType === "expense" && (
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+              <button onClick={() => setCategory("Ahorro")}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${category === "Ahorro" ? "bg-primary text-primary-foreground border-primary shadow-glow" : "bg-primary/10 text-primary border-primary/30"}`}>
+                <PiggyBank className="h-3.5 w-3.5" /> Ahorro
+              </button>
               {cats.map((c) => {
                 const Icon = (Icons[c.icon as keyof typeof Icons] as typeof Icons.Tag) ?? Icons.Tag;
                 const active = category === c.name;
@@ -279,10 +283,6 @@ function Dashboard() {
                   </button>
                 );
               })}
-              <button onClick={() => setCategory("Ahorro")}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${category === "Ahorro" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
-                <PiggyBank className="h-3.5 w-3.5" /> Ahorro
-              </button>
             </div>
           )}
           <div className="flex gap-2">
