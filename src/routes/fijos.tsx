@@ -95,7 +95,7 @@ function FijosPage() {
   const totalOut = expenses.filter((i) => i.is_active).reduce((s, i) => s + Math.abs(Number(i.amount)), 0);
 
   return (
-    <main className="min-h-screen bg-background px-6 py-6 max-w-md mx-auto w-full pb-24">
+    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-24">
       <header className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold font-display">Fijos</h1>
@@ -198,7 +198,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-semibold">{title}</h2>
-      <div className="space-y-2">{children}</div>
+      <div className="grid sm:grid-cols-2 gap-2">{children}</div>
     </section>
   );
 }

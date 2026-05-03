@@ -6,10 +6,11 @@ import { useDailyStatus, useInvalidateFinance, dailyStatusKey, type DailyStatus 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
 import * as Icons from "lucide-react";
-import { Plus, LogOut, Flame, AlertTriangle, Smile, TrendingUp, TrendingDown, Lock } from "lucide-react";
+import { Plus, LogOut, Flame, AlertTriangle, Smile, TrendingUp, TrendingDown, Lock, PiggyBank, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-type Goal = { id: string; name: string; monthly_contribution: number };
+type Goal = { id: string; name: string; monthly_contribution: number; current_amount: number };
 type Category = { id: string; name: string; icon: string; color: string };
 
 function Dashboard() {
@@ -32,6 +33,7 @@ function Dashboard() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Café");
   const [txType, setTxType] = useState<"expense" | "income">("expense");
+  const [goalId, setGoalId] = useState<string>("");
   const [pendingExpense, setPendingExpense] = useState<{ amount: number; category: string } | null>(null);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ function Dashboard() {
     queryKey: ["goals", "active"],
     enabled: authReady,
     queryFn: async (): Promise<Goal[]> => {
-      const { data, error } = await supabase.from("goals").select("id,name,monthly_contribution").eq("status", "active");
+      const { data, error } = await supabase.from("goals").select("id,name,monthly_contribution,current_amount").eq("status", "active");
       if (error) throw error;
       return (data ?? []) as Goal[];
     },
@@ -70,10 +72,17 @@ function Dashboard() {
     if (cats.length && !cats.find((x) => x.name === category)) setCategory(cats[0].name);
   }, [cats, category]);
 
+  useEffect(() => {
+    if (category !== "Ahorro") setGoalId("");
+    else if (!goalId && goals[0]) setGoalId(goals[0].id);
+  }, [category, goals, goalId]);
+
   const submit = async () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
-    if (txType === "expense" && num > 50 && goals.length > 0) { setPendingExpense({ amount: num, category }); return; }
+    if (txType === "expense" && category !== "Ahorro" && num > 50 && goals.length > 0) {
+      setPendingExpense({ amount: num, category }); return;
+    }
     await registerTx(num, category, txType);
   };
 
@@ -81,19 +90,34 @@ function Dashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setAmount("");
+    const isContribution = type === "expense" && cat === "Ahorro" && goalId;
     const signed = type === "income" ? Math.abs(num) : -Math.abs(num);
     qc.setQueryData<DailyStatus | undefined>(dailyStatusKey, (prev) =>
       prev ? {
         ...prev,
         budget_today: type === "income" ? prev.budget_today + num : Math.max(0, prev.budget_today - num),
-        spent_month: type === "expense" ? prev.spent_month + num : prev.spent_month,
+        spent_month: type === "expense" && !isContribution ? prev.spent_month + num : prev.spent_month,
         available_today: prev.available_today + signed,
       } : prev
     );
-    const finalCat = type === "income" ? (cat === "Ahorro" ? "Ingreso" : cat) : cat;
-    const { error } = await supabase.from("transactions").insert({ user_id: user.id, amount: signed, category: type === "income" ? "Ingreso extra" : finalCat });
-    if (error) toast.error("Error");
-    else toast.success(`${type === "income" ? "+" : "-"}${num.toFixed(2)}€ · ${type === "income" ? "Ingreso" : cat}`);
+    const finalCat = type === "income" ? "Ingreso extra" : cat;
+    const { error } = await supabase.from("transactions").insert({
+      user_id: user.id,
+      amount: signed,
+      category: finalCat,
+      goal_id: isContribution ? goalId : null,
+    });
+    if (error) { toast.error("Error"); return; }
+
+    if (isContribution) {
+      const g = goals.find((x) => x.id === goalId);
+      if (g) {
+        await supabase.from("goals").update({ current_amount: Number(g.current_amount) + num }).eq("id", g.id);
+      }
+      toast.success(`+${num.toFixed(2)}€ aportados a ${g?.name ?? "meta"} 🎯`);
+    } else {
+      toast.success(`${type === "income" ? "+" : "-"}${num.toFixed(2)}€ · ${type === "income" ? "Ingreso" : cat}`);
+    }
     invalidateFinance();
   };
 
@@ -132,76 +156,108 @@ function Dashboard() {
   if (loading) return <div className="min-h-screen grid place-items-center text-muted-foreground">Cargando tu día…</div>;
 
   return (
-    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md mx-auto w-full pb-56">
-      <header className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-money grid place-items-center shadow-glow">
-            <TrendingUp className="h-5 w-5 text-primary-foreground" />
+    <main className="min-h-screen bg-background pb-56 md:pb-40">
+      <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <header className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-gradient-money grid place-items-center shadow-glow">
+              <TrendingUp className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <p className="text-xs text-muted-foreground capitalize">{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</p>
           </div>
-          <p className="text-xs text-muted-foreground capitalize">{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={logout}><LogOut className="h-4 w-4" /></Button>
-      </header>
+          <Button variant="ghost" size="icon" onClick={logout}><LogOut className="h-4 w-4" /></Button>
+        </header>
 
-      <section className="text-center py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <p className="text-sm text-muted-foreground mb-3">Puedes gastar hoy</p>
-        <div className="relative inline-block mb-6">
-          <div className="absolute inset-0 -z-10 bg-primary blur-3xl opacity-20 rounded-full" />
-          <h1 className="text-6xl sm:text-7xl font-bold font-display tracking-tight tabular-nums leading-none">
-            {(status?.budget_today ?? 0).toFixed(2).replace(".", ",")}
-            <span className="text-2xl sm:text-3xl text-muted-foreground ml-1">€</span>
-          </h1>
-        </div>
-        {mood && (
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${mood.bg} mb-3`}>
-            <mood.Icon className={`h-4 w-4 ${mood.color}`} />
-            <span className={`text-sm font-medium ${mood.color}`}>{mood.label}</span>
-          </div>
-        )}
-        {burnoutText && (
-          <p className="text-sm text-muted-foreground">A este ritmo, llegas hasta el <span className="text-foreground font-semibold">{burnoutText}</span></p>
-        )}
-      </section>
-
-      <section className="grid grid-cols-3 gap-2 mt-6">
-        <StatCard label="Disponible" value={`${(status?.available_today ?? 0).toFixed(0)}€`} />
-        <StatCard label="Gastado" value={`${(status?.spent_month ?? 0).toFixed(0)}€`} />
-        <StatCard label="Reservado" value={`${(status?.fixed_pending ?? 0).toFixed(0)}€`} hint />
-      </section>
-
-      {(status?.fixed_pending ?? 0) > 0 && (
-        <section className="mt-4 p-4 rounded-2xl bg-card border flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-warning/15 grid place-items-center shrink-0">
-            <Lock className="h-4 w-4 text-warning" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">{(status?.fixed_pending ?? 0).toFixed(0)}€ reservados</p>
-            <p className="text-xs text-muted-foreground">Para gastos fijos pendientes este mes</p>
-          </div>
-        </section>
-      )}
-
-      {goals.length > 0 && (
-        <section className="mt-6 space-y-2">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Metas</h2>
-          {goals.slice(0, 2).map((g) => (
-            <button key={g.id} onClick={() => navigate({ to: "/metas" })} className="w-full flex items-center justify-between p-4 rounded-2xl bg-card border hover:border-primary/50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-secondary grid place-items-center"><Icons.Target className="h-4 w-4 text-primary" /></div>
-                <div className="text-left">
-                  <p className="font-semibold">{g.name}</p>
-                  <p className="text-xs text-muted-foreground">{g.monthly_contribution}€/mes</p>
-                </div>
+        <div className="md:grid md:grid-cols-2 md:gap-8 lg:gap-12">
+          {/* Left column: hero */}
+          <section className="text-center md:text-left py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <p className="text-sm text-muted-foreground mb-3">Puedes gastar hoy</p>
+            <div className="relative inline-block mb-6">
+              <div className="absolute inset-0 -z-10 bg-primary blur-3xl opacity-20 rounded-full" />
+              <h1 className="text-6xl sm:text-7xl lg:text-8xl font-bold font-display tracking-tight tabular-nums leading-none">
+                {(status?.budget_today ?? 0).toFixed(2).replace(".", ",")}
+                <span className="text-2xl sm:text-3xl text-muted-foreground ml-1">€</span>
+              </h1>
+            </div>
+            {mood && (
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${mood.bg} mb-3`}>
+                <mood.Icon className={`h-4 w-4 ${mood.color}`} />
+                <span className={`text-sm font-medium ${mood.color}`}>{mood.label}</span>
               </div>
-              <Icons.ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-          ))}
-        </section>
-      )}
+            )}
+            {burnoutText && (
+              <p className="text-sm text-muted-foreground">A este ritmo, llegas hasta el <span className="text-foreground font-semibold">{burnoutText}</span></p>
+            )}
+          </section>
 
-      <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 sm:px-6 py-3 z-30">
-        <div className="max-w-md mx-auto space-y-2">
-          <div className="flex gap-1 p-1 rounded-full bg-secondary">
+          {/* Right column: stats + cards */}
+          <div className="space-y-4 mt-6 md:mt-4">
+            <section className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-2">
+              <StatCard label="Disponible" value={`${(status?.available_today ?? 0).toFixed(0)}€`} />
+              <StatCard label="Gastado" value={`${(status?.spent_month ?? 0).toFixed(0)}€`} />
+              <StatCard label="Fijos/mes" value={`${(status?.fixed_total ?? 0).toFixed(0)}€`} hint />
+              <StatCard label="Patrimonio" value={`${(status?.patrimony_goals ?? 0).toFixed(0)}€`} accent />
+            </section>
+
+            {(status?.fixed_total ?? 0) > 0 && (
+              <section className="p-4 rounded-2xl bg-card border flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-warning/15 grid place-items-center shrink-0">
+                  <Lock className="h-4 w-4 text-warning" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">
+                    {(status?.fixed_paid ?? 0).toFixed(0)}€ pagados · {(status?.fixed_pending ?? 0).toFixed(0)}€ pendientes
+                  </p>
+                  <p className="text-xs text-muted-foreground">Total fijos del mes: {(status?.fixed_total ?? 0).toFixed(0)}€</p>
+                </div>
+              </section>
+            )}
+
+            {(status?.savings_month ?? 0) > 0 && (
+              <section className="p-4 rounded-2xl bg-card border flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/15 grid place-items-center shrink-0">
+                  <PiggyBank className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">
+                    {(status?.saved_month ?? 0).toFixed(0)}€ aportados este mes
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {(status?.savings_pending ?? 0) > 0
+                      ? `Faltan ${(status?.savings_pending ?? 0).toFixed(0)}€ para llegar a ${(status?.savings_month ?? 0).toFixed(0)}€`
+                      : `Meta de ahorro mensual cumplida ✨`}
+                  </p>
+                </div>
+              </section>
+            )}
+
+            {goals.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Metas</h2>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {goals.slice(0, 4).map((g) => (
+                    <button key={g.id} onClick={() => navigate({ to: "/metas" })} className="flex items-center justify-between p-4 rounded-2xl bg-card border hover:border-primary/50 transition-colors text-left">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-9 w-9 rounded-xl bg-secondary grid place-items-center shrink-0"><Icons.Target className="h-4 w-4 text-primary" /></div>
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{g.name}</p>
+                          <p className="text-xs text-muted-foreground">{g.monthly_contribution}€/mes</p>
+                        </div>
+                      </div>
+                      <Icons.ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick add: fixed bar */}
+      <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 sm:px-6 py-3 z-30 md:bottom-0 md:border-t">
+        <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto space-y-2">
+          <div className="flex gap-1 p-1 rounded-full bg-secondary md:max-w-xs">
             <button onClick={() => setTxType("expense")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txType === "expense" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
               <TrendingDown className="h-3.5 w-3.5" /> Gasto
@@ -223,14 +279,26 @@ function Dashboard() {
                   </button>
                 );
               })}
+              <button onClick={() => setCategory("Ahorro")}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${category === "Ahorro" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                <PiggyBank className="h-3.5 w-3.5" /> Ahorro
+              </button>
             </div>
           )}
           <div className="flex gap-2">
-            <Input type="number" inputMode="decimal" placeholder={txType === "income" ? "Ingreso (€)" : "0,00 €"} value={amount}
+            {txType === "expense" && category === "Ahorro" && goals.length > 0 && (
+              <Select value={goalId} onValueChange={setGoalId}>
+                <SelectTrigger className="h-12 w-44 shrink-0"><SelectValue placeholder="Meta" /></SelectTrigger>
+                <SelectContent>
+                  {goals.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <Input type="number" inputMode="decimal" placeholder={txType === "income" ? "Ingreso (€)" : category === "Ahorro" ? "Aportar a meta (€)" : "0,00 €"} value={amount}
               onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()}
-              className="h-12 text-xl font-bold font-display text-center" />
-            <Button onClick={submit} className={`h-12 w-12 shadow-glow ${txType === "income" ? "bg-primary text-primary-foreground" : "bg-gradient-money text-primary-foreground"} hover:opacity-90`} aria-label={txType === "income" ? "Añadir ingreso" : "Añadir gasto"}>
-              {txType === "income" ? <TrendingUp className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              className="h-12 text-xl font-bold font-display text-center flex-1" />
+            <Button onClick={submit} className={`h-12 w-12 shadow-glow ${txType === "income" ? "bg-primary text-primary-foreground" : "bg-gradient-money text-primary-foreground"} hover:opacity-90`} aria-label="Añadir">
+              {txType === "income" ? <TrendingUp className="h-5 w-5" /> : category === "Ahorro" ? <Sparkles className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
             </Button>
           </div>
         </div>
@@ -260,9 +328,9 @@ function Dashboard() {
   );
 }
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: boolean }) {
+function StatCard({ label, value, hint, accent }: { label: string; value: string; hint?: boolean; accent?: boolean }) {
   return (
-    <div className={`p-3 rounded-2xl border text-center ${hint ? "bg-warning/5 border-warning/30" : "bg-card"}`}>
+    <div className={`p-3 rounded-2xl border text-center ${hint ? "bg-warning/5 border-warning/30" : accent ? "bg-primary/5 border-primary/30" : "bg-card"}`}>
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <p className="font-bold font-display tabular-nums">{value}</p>
     </div>

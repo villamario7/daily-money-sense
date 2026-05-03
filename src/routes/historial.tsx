@@ -50,7 +50,7 @@ function Historial() {
     .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
 
   return (
-    <main className="min-h-screen bg-background px-6 py-6 max-w-md mx-auto w-full pb-24">
+    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-24">
       <header className="mb-6">
         <h1 className="text-3xl font-bold font-display">Historial</h1>
         <p className="text-sm text-muted-foreground mt-1">{totalMonth.toFixed(2)}€ gastados este mes</p>
@@ -71,7 +71,7 @@ function Historial() {
           {Object.entries(grouped).map(([day, items]) => (
             <section key={day}>
               <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-semibold">{day}</h2>
-              <div className="space-y-2">
+              <div className="grid sm:grid-cols-2 gap-2">
                 {items.map((t) => (
                   <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-card border gap-2">
                     <div className="flex-1 min-w-0">
