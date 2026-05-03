@@ -71,10 +71,22 @@ function MetasPage() {
   };
 
   const addContribution = async (g: Goal, amount: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
     const newAmount = Number(g.current_amount) + amount;
+    // 1) registrar la transacción de aporte (negativa, vinculada a la meta)
+    const { error: txErr } = await supabase.from("transactions").insert({
+      user_id: user.id,
+      amount: -Math.abs(amount),
+      category: "Ahorro",
+      goal_id: g.id,
+      note: `Aporte a ${g.name}`,
+    });
+    if (txErr) { toast.error("Error al registrar aporte"); return; }
+    // 2) actualizar el saldo de la meta
     await supabase.from("goals").update({ current_amount: newAmount }).eq("id", g.id);
     setGoals((p) => p.map((x) => x.id === g.id ? { ...x, current_amount: newAmount } : x));
-    toast.success(`+${amount}€ a ${g.name}`);
+    toast.success(`+${amount}€ a ${g.name} 🎯`);
     invalidateFinance();
   };
 
