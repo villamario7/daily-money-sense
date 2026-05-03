@@ -71,7 +71,7 @@ function Historial() {
           {Object.entries(grouped).map(([day, items]) => (
             <section key={day}>
               <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-2 font-semibold">{day}</h2>
-              <div className="space-y-2">
+              <div className="grid sm:grid-cols-2 gap-2">
                 {items.map((t) => (
                   <div key={t.id} className="flex items-center justify-between p-3 rounded-xl bg-card border gap-2">
                     <div className="flex-1 min-w-0">
