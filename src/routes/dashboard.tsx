@@ -195,7 +195,7 @@ function Dashboard() {
             <section className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-2">
               <StatCard label="Disponible" value={`${(status?.available_today ?? 0).toFixed(0)}€`} />
               <StatCard label="Gastado" value={`${(status?.spent_month ?? 0).toFixed(0)}€`} />
-              <StatCard label="Reservado" value={`${(status?.fixed_pending ?? 0).toFixed(0)}€`} hint />
+              <StatCard label="Fijos/mes" value={`${(status?.fixed_total ?? 0).toFixed(0)}€`} hint />
               <StatCard label="Patrimonio" value={`${(status?.patrimony_goals ?? 0).toFixed(0)}€`} accent />
             </section>
 
