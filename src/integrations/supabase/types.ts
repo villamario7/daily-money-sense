@@ -134,6 +134,7 @@ export type Database = {
           category: string | null
           created_at: string
           day_of_month: number
+          goal_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -145,6 +146,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           day_of_month: number
+          goal_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -156,19 +158,29 @@ export type Database = {
           category?: string | null
           created_at?: string
           day_of_month?: number
+          goal_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
           type?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "recurring_items_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
           amount: number
           category: string | null
           created_at: string
+          goal_id: string | null
           id: string
           note: string | null
           user_id: string
@@ -177,6 +189,7 @@ export type Database = {
           amount: number
           category?: string | null
           created_at?: string
+          goal_id?: string | null
           id?: string
           note?: string | null
           user_id: string
@@ -185,11 +198,20 @@ export type Database = {
           amount?: number
           category?: string | null
           created_at?: string
+          goal_id?: string | null
           id?: string
           note?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
