@@ -50,7 +50,7 @@ function Historial() {
     .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
 
   return (
-    <main className="min-h-screen bg-background px-6 py-6 max-w-md mx-auto w-full pb-24">
+    <main className="min-h-screen bg-background px-4 sm:px-6 py-6 max-w-md md:max-w-3xl lg:max-w-4xl mx-auto w-full pb-24">
       <header className="mb-6">
         <h1 className="text-3xl font-bold font-display">Historial</h1>
         <p className="text-sm text-muted-foreground mt-1">{totalMonth.toFixed(2)}€ gastados este mes</p>
