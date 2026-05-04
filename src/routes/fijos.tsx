@@ -398,6 +398,3 @@ function Row({ it, onEdit, onDelete, onToggle }: {
   );
 }
 
-// Suppress unused warnings
-void onToggle;
-function onToggle() {}
