@@ -24,6 +24,7 @@ export const Route = createFileRoute("/dashboard")({
 
 type Goal = { id: string; name: string; monthly_contribution: number; current_amount: number };
 type Category = { id: string; name: string; icon: string; color: string };
+type TxMode = "expense" | "income" | "savings";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ function Dashboard() {
   const [authReady, setAuthReady] = useState(false);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Café");
-  const [txType, setTxType] = useState<"expense" | "income">("expense");
+  const [txMode, setTxMode] = useState<TxMode>("expense");
   const [goalId, setGoalId] = useState<string>("");
   const [pendingExpense, setPendingExpense] = useState<{ amount: number; category: string } | null>(null);
 
@@ -68,39 +69,45 @@ function Dashboard() {
     },
   });
 
-  useEffect(() => {
-    if (cats.length && !cats.find((x) => x.name === category)) setCategory(cats[0].name);
-  }, [cats, category]);
+  const expenseCats = useMemo(() => cats.filter((c) => c.name !== "Ahorro"), [cats]);
 
   useEffect(() => {
-    if (category !== "Ahorro") setGoalId("");
+    if (expenseCats.length && !expenseCats.find((x) => x.name === category)) setCategory(expenseCats[0].name);
+  }, [expenseCats, category]);
+
+  useEffect(() => {
+    if (txMode !== "savings") setGoalId("");
     else if (!goalId && goals[0]) setGoalId(goals[0].id);
-  }, [category, goals, goalId]);
+  }, [txMode, goals, goalId]);
 
   const submit = async () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
-    if (txType === "expense" && category !== "Ahorro" && num > 50 && goals.length > 0) {
+    if (txMode === "savings" && !goalId) { toast.error("Elige una meta"); return; }
+    if (txMode === "expense" && num > 50 && goals.length > 0) {
       setPendingExpense({ amount: num, category }); return;
     }
-    await registerTx(num, category, txType);
+    await registerTx(num, txMode, category);
   };
 
-  const registerTx = async (num: number, cat: string, type: "expense" | "income") => {
+  const registerTx = async (num: number, mode: TxMode, cat: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setAmount("");
-    const isContribution = type === "expense" && cat === "Ahorro" && goalId;
-    const signed = type === "income" ? Math.abs(num) : -Math.abs(num);
+    const isContribution = mode === "savings" && !!goalId;
+    const signed = mode === "income" ? Math.abs(num) : -Math.abs(num);
     qc.setQueryData<DailyStatus | undefined>(dailyStatusKey, (prev) =>
       prev ? {
         ...prev,
-        budget_today: type === "income" ? prev.budget_today + num : Math.max(0, prev.budget_today - num),
-        spent_month: type === "expense" && !isContribution ? prev.spent_month + num : prev.spent_month,
+        budget_today: mode === "income" ? prev.budget_today + num : mode === "expense" ? Math.max(0, prev.budget_today - num) : prev.budget_today,
+        spent_month: mode === "expense" ? prev.spent_month + num : prev.spent_month,
+        saved_month: isContribution ? prev.saved_month + num : prev.saved_month,
+        savings_pending: isContribution ? Math.max(0, prev.savings_pending - num) : prev.savings_pending,
+        patrimony_goals: isContribution ? prev.patrimony_goals + num : prev.patrimony_goals,
         available_today: prev.available_today + signed,
       } : prev
     );
-    const finalCat = type === "income" ? "Ingreso extra" : cat;
+    const finalCat = mode === "income" ? "Ingreso extra" : isContribution ? "Ahorro" : cat;
     const { error } = await supabase.from("transactions").insert({
       user_id: user.id,
       amount: signed,
@@ -116,7 +123,7 @@ function Dashboard() {
       }
       toast.success(`+${num.toFixed(2)}€ aportados a ${g?.name ?? "meta"} 🎯`);
     } else {
-      toast.success(`${type === "income" ? "+" : "-"}${num.toFixed(2)}€ · ${type === "income" ? "Ingreso" : cat}`);
+      toast.success(`${mode === "income" ? "+" : "-"}${num.toFixed(2)}€ · ${mode === "income" ? "Ingreso" : cat}`);
     }
     invalidateFinance();
   };
@@ -125,7 +132,7 @@ function Dashboard() {
     if (pendingExpense) {
       const { amount, category } = pendingExpense;
       setPendingExpense(null);
-      await registerTx(amount, category, "expense");
+      await registerTx(amount, "expense", category);
     }
   };
 
