@@ -179,7 +179,7 @@ function Dashboard() {
           {/* Left column: hero */}
           <section className="text-center md:text-left py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <p className="text-sm text-muted-foreground mb-3">Puedes gastar hoy</p>
-            <div className="relative inline-block mb-6">
+            <div className="relative inline-block mb-8">
               <div className="absolute inset-0 -z-10 bg-primary blur-3xl opacity-20 rounded-full" />
               <h1 className="text-6xl sm:text-7xl lg:text-8xl font-bold font-display tracking-tight tabular-nums leading-none">
                 {(status?.budget_today ?? 0).toFixed(2).replace(".", ",")}
@@ -187,7 +187,7 @@ function Dashboard() {
               </h1>
             </div>
             {mood && (
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${mood.bg} mb-3`}>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${mood.bg} mb-4`}>
                 <mood.Icon className={`h-4 w-4 ${mood.color}`} />
                 <span className={`text-sm font-medium ${mood.color}`}>{mood.label}</span>
               </div>
@@ -262,25 +262,25 @@ function Dashboard() {
       </div>
 
       {/* Quick add: fixed bar */}
-      <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 sm:px-6 py-3 z-30 md:bottom-0 md:border-t">
+      <section className="fixed bottom-16 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 sm:px-6 py-3 z-30">
         <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto space-y-2">
-          <div className="flex gap-1 p-1 rounded-full bg-secondary md:max-w-xs">
-            <button onClick={() => setTxType("expense")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txType === "expense" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          <div className="grid grid-cols-3 gap-1 p-1 rounded-full bg-secondary md:max-w-md">
+            <button onClick={() => setTxMode("expense")}
+              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txMode === "expense" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
               <TrendingDown className="h-3.5 w-3.5" /> Gasto
             </button>
-            <button onClick={() => setTxType("income")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txType === "income" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}>
+            <button onClick={() => setTxMode("income")}
+              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txMode === "income" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}>
               <TrendingUp className="h-3.5 w-3.5" /> Ingreso
             </button>
+            <button onClick={() => setTxMode("savings")}
+              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${txMode === "savings" ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}>
+              <PiggyBank className="h-3.5 w-3.5" /> Ahorro
+            </button>
           </div>
-          {txType === "expense" && (
+          {txMode === "expense" && (
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-              <button onClick={() => setCategory("Ahorro")}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${category === "Ahorro" ? "bg-primary text-primary-foreground border-primary shadow-glow" : "bg-primary/10 text-primary border-primary/30"}`}>
-                <PiggyBank className="h-3.5 w-3.5" /> Ahorro
-              </button>
-              {cats.map((c) => {
+              {expenseCats.map((c) => {
                 const Icon = (Icons[c.icon as keyof typeof Icons] as typeof Icons.Tag) ?? Icons.Tag;
                 const active = category === c.name;
                 return (
@@ -292,20 +292,23 @@ function Dashboard() {
               })}
             </div>
           )}
-          <div className="flex gap-2">
-            {txType === "expense" && category === "Ahorro" && goals.length > 0 && (
+          {txMode === "savings" && goals.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground shrink-0">Meta</span>
               <Select value={goalId} onValueChange={setGoalId}>
-                <SelectTrigger className="h-12 w-44 shrink-0"><SelectValue placeholder="Meta" /></SelectTrigger>
+                <SelectTrigger className="h-11 flex-1"><SelectValue placeholder="Elige meta" /></SelectTrigger>
                 <SelectContent>
                   {goals.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-            )}
-            <Input type="number" inputMode="decimal" placeholder={txType === "income" ? "Ingreso (€)" : category === "Ahorro" ? "Aportar a meta (€)" : "0,00 €"} value={amount}
+            </div>
+          )}
+          <div className="grid grid-cols-[minmax(0,1fr)_3rem] gap-2">
+            <Input type="number" inputMode="decimal" placeholder={txMode === "income" ? "Ingreso (€)" : txMode === "savings" ? "Aportar (€)" : "0,00 €"} value={amount}
               onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()}
-              className="h-12 text-xl font-bold font-display text-center flex-1" />
-            <Button onClick={submit} className={`h-12 w-12 shadow-glow ${txType === "income" ? "bg-primary text-primary-foreground" : "bg-gradient-money text-primary-foreground"} hover:opacity-90`} aria-label="Añadir">
-              {txType === "income" ? <TrendingUp className="h-5 w-5" /> : category === "Ahorro" ? <Sparkles className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              className="h-12 text-xl font-bold font-display text-center min-w-0" />
+            <Button onClick={submit} className={`h-12 w-12 shadow-glow ${txMode === "income" ? "bg-primary text-primary-foreground" : "bg-gradient-money text-primary-foreground"} hover:opacity-90`} aria-label="Añadir">
+              {txMode === "income" ? <TrendingUp className="h-5 w-5" /> : txMode === "savings" ? <Sparkles className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
             </Button>
           </div>
         </div>
